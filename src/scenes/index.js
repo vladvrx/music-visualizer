@@ -25,8 +25,12 @@ import butterfly from './butterfly.js';
 import warp from './warp.js';
 import gyroscope from './gyroscope.js';
 import rain from './rain.js';
+import vortex from './vortex.js';
+import smoke from './smoke.js';
+import prism from './prism.js';
+import corona from './corona.js';
 
 export const SCENES = {
-  fluid, fireworks, flow, ribbons, butterfly, flower, warp, gyroscope, rain, skyline, helix, pulsar, lissajous, storm,
+  fluid, fireworks, vortex, smoke, prism, corona, flow, ribbons, butterfly, flower, warp, gyroscope, rain, skyline, helix, pulsar, lissajous, storm,
   bars, rings, starburst, spiral, particles, tunnel, terrain, orb, grid, nebula, kaleidoscope, waveplain, matrix,
 };

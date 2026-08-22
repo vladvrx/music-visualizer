@@ -26,6 +26,24 @@ export const FACTORY = {
     bloom: 1.2, vignette: 0.5, chromatic: 0.3, trails: 0, fogDensity: 0,
     hueSpeed: 0, beatFlash: 0.2, reactBass: 1.5, reactTreble: 0.8,
   },
+  'Solar Flare': {
+    scene: 'corona', palette: 'fire', background: '#080201',
+    camMode: 'front', camDistance: 50, orbitSpeed: 0, beatShake: 0.2,
+    reactBass: 1.4, reactMid: 0.8, reactTreble: 1.0, beatFlash: 0.5,
+    bloom: 1.1, vignette: 0.6, chromatic: 0.25, trails: 0, fogDensity: 0, hueSpeed: 0.01,
+  },
+  'Galaxy Drain': {
+    scene: 'vortex', palette: 'aurora', background: '#010208',
+    camMode: 'top', camDistance: 55, orbitSpeed: 0, beatShake: 0.15,
+    reactBass: 1.5, reactTreble: 0.8, spin: 0.3,
+    bloom: 1.2, vignette: 0.65, chromatic: 0.15, trails: 0.35, fogDensity: 0, hueSpeed: 0.02,
+  },
+  'Incense': {
+    scene: 'smoke', palette: 'toxic', background: '#020402',
+    camMode: 'front', camDistance: 48, orbitSpeed: 0, beatShake: 0,
+    reactBass: 0.9, reactMid: 1.0, beatFlash: 0.2,
+    bloom: 0.9, vignette: 0.55, chromatic: 0.1, trails: 0.25, fogDensity: 0, hueSpeed: 0.03,
+  },
   'Currents — White Lines': {
     scene: 'flow', palette: 'mono', background: '#101114',
     camMode: 'front', camDistance: 58, orbitSpeed: 0, beatShake: 0,

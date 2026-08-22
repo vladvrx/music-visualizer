@@ -133,6 +133,10 @@ export function sceneParamsList() {
     warp:        ['particleCount', 'particleSpread', 'reactBass'],
     gyroscope:   ['spin', 'reactBass', 'reactTreble'],
     rain:        ['barCount', 'terrainSpeed', 'reactBass', 'reactTreble'],
+    vortex:      ['spin', 'reactBass', 'reactTreble'],
+    smoke:       ['reactBass', 'reactMid', 'beatFlash'],
+    prism:       ['spin', 'reactBass', 'beatFlash'],
+    corona:      ['reactBass', 'reactMid', 'reactTreble', 'beatFlash'],
     matrix:      ['matrixSize', 'spin'],
   };
 }

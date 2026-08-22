@@ -1,6 +1,6 @@
 # Music Visualizer
 
-The ultimate browser music visualizer — 27 GPU scenes, an Auto VJ director, and a deep FX rack, all in plain Three.js. Load any song and watch it come alive.
+The ultimate browser music visualizer — 31 GPU scenes, an Auto VJ director, and a deep FX rack, all in plain Three.js. Load any song and watch it come alive.
 
 ## Run
 
@@ -19,8 +19,8 @@ Then open the printed URL (default http://localhost:5173).
 - Live microphone mode
 - Transport: play/pause, seek, volume, prev/next, playlist picker
 
-**27 visualization scenes**
-Fluid (real GPU Navier-Stokes fluid sim), Fireworks (beat-triggered bursts), Currents (Tame Impala-style flow lines), Ribbons, Butterfly curve, Warp starfield, Gyroscope, Digital Rain, Skyline, DNA Helix, Pulsar accretion disk, Lissajous, Cube Storm, Bars, Rings, Starburst, Spiral, Particles, Tunnel, Terrain, Orb, Wave Grid, Nebula, Kaleidoscope, Liquid, Cube Matrix — every one fully audio-reactive and palette-driven.
+**31 visualization scenes**
+Fluid (real GPU Navier-Stokes fluid sim), Fireworks (beat-triggered bursts), Vortex (galaxy drain), Smoke (rising plumes), Prism (nested wireframe polyhedra), Corona (shader sun), Currents (Tame Impala-style flow lines), Ribbons, Butterfly curve, Warp starfield, Gyroscope, Digital Rain, Skyline, DNA Helix, Pulsar accretion disk, Lissajous, Cube Storm, Bars, Rings, Starburst, Spiral, Particles, Tunnel, Terrain, Orb, Wave Grid, Nebula, Kaleidoscope, Liquid, Cube Matrix — every one fully audio-reactive and palette-driven.
 
 **Deep customization** (right panel)
 - Audio: sensitivity, detail, log/linear frequency mapping, FFT size, smoothing
