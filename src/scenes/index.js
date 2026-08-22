@@ -13,7 +13,15 @@ import rings from './rings.js';
 import waveplain from './waveplain.js';
 import matrix from './matrix.js';
 import fluid from './fluid.js';
+import ribbons from './ribbons.js';
+import flower from './flower.js';
+import skyline from './skyline.js';
+import helix from './helix.js';
+import pulsar from './pulsar.js';
+import lissajous from './lissajous.js';
+import storm from './storm.js';
 
 export const SCENES = {
-  fluid, flow, bars, rings, starburst, spiral, particles, tunnel, terrain, orb, grid, nebula, kaleidoscope, waveplain, matrix,
+  fluid, flow, ribbons, flower, skyline, helix, pulsar, lissajous, storm,
+  bars, rings, starburst, spiral, particles, tunnel, terrain, orb, grid, nebula, kaleidoscope, waveplain, matrix,
 };

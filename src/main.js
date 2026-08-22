@@ -37,6 +37,8 @@ const FinalShader = {
     uBrightness: { value: 1.5 }, uPixel: { value: 0 }, uScan: { value: 0 }, uGrain: { value: 0 },
     uMirror: { value: 0 }, uZoom: { value: 1 }, uTime: { value: 0 }, uFade: { value: 1 },
     uTransK: { value: 0 }, uTransType: { value: 0 }, uTransSeed: { value: 0 },
+    uKaleido: { value: 0 }, uKaleidoSpin: { value: 0 }, uRadial: { value: 0 }, uBeat: { value: 0 },
+    uHue: { value: 0 }, uPosterize: { value: 0 }, uInvert: { value: 0 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
@@ -44,8 +46,14 @@ const FinalShader = {
     uniform float uVignette, uChromatic, uBrightness, uPixel, uScan, uGrain, uMirror, uZoom, uTime, uFade;
     uniform float uTransK, uTransSeed;
     uniform int uTransType;
+    uniform float uKaleido, uKaleidoSpin, uRadial, uBeat, uHue, uPosterize, uInvert;
     varying vec2 vUv;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)) + uTime * 13.0) * 43758.5453); }
+    vec3 hueShift(vec3 c, float a){
+      const vec3 k = vec3(0.57735);
+      float ca = cos(a);
+      return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca);
+    }
     void main(){
       vec2 uv = vUv;
       float k = uTransK;
@@ -55,32 +63,38 @@ const FinalShader = {
       // ---- transition geometry effects (applied before sampling) ----
       if (k > 0.001) {
         if (uTransType == 1) {
-          // glitch: horizontal slice offsets + occasional row folding
           float row = floor(uv.y * (10.0 + uTransSeed * 26.0));
           float r = hash(vec2(row, uTransSeed * 100.0));
           uv.x += (r - 0.5) * k * k * 0.7;
           if (r > 1.0 - k * 0.4) uv.x = 1.0 - uv.x;
           chroma += k * 2.5;
         } else if (uTransType == 2) {
-          // zoom spin: barrel toward camera while rotating
           vec2 c = uv - 0.5;
           float ang = k * k * 3.5 * (uTransSeed > 0.5 ? 1.0 : -1.0);
           float s = sin(ang), co = cos(ang);
           c = vec2(c.x * co - c.y * s, c.x * s + c.y * co);
           uv = c / max(0.001, 1.0 - k * k * 1.4) + 0.5;
         } else if (uTransType == 3) {
-          // whip slide with motion shear
           float dir = uTransSeed > 0.5 ? 1.0 : -1.0;
           uv.x += dir * k * k * 1.6;
           uv.y += (hash(vec2(floor(uv.y * 30.0), uTransSeed)) - 0.5) * k * 0.15;
         } else if (uTransType == 4) {
-          // pixel dissolve: chunky blocks take over
           pixel = max(pixel, k * k * 220.0);
           chroma += k * 1.2;
         } else if (uTransType == 8) {
-          // rgb split explosion
           chroma += k * k * 14.0;
         }
+      }
+
+      // post-process kaleidoscope: fold uv angle into N mirrored slices
+      if (uKaleido > 1.5) {
+        vec2 c = vUv - 0.5;
+        float ang = atan(c.y, c.x) + uKaleidoSpin * uTime;
+        float slice = 6.2831853 / floor(uKaleido);
+        float a = mod(ang, slice) / slice;
+        a = abs(a * 2.0 - 1.0);
+        float r = length(c);
+        uv = vec2(cos(a * slice), sin(a * slice)) * r + 0.5;
       }
 
       // mirror: fold right half onto the left (symmetry effect)
@@ -95,14 +109,32 @@ const FinalShader = {
       col.g = texture2D(tDiffuse, uv).g;
       col.b = texture2D(tDiffuse, uv - d).b;
 
-      // ---- transition color effects (applied after sampling) ----
+      // radial blur toward center, strongest on beats
+      float rb = uRadial * (0.35 + uBeat * 1.4);
+      if (rb > 0.01) {
+        vec3 acc = col;
+        for (int i = 1; i <= 6; i++) {
+          float f = float(i) / 6.0 * rb * 0.12;
+          acc += texture2D(tDiffuse, mix(uv, vec2(0.5), f) + d).rgb;
+          acc += texture2D(tDiffuse, mix(uv, vec2(0.5), f * 1.7) - d).rgb;
+        }
+        col = acc / 13.0;
+      }
+
+      // ---- transition color effects ----
       if (k > 0.001) {
         if (uTransType == 5) {
-          // iris: visible circle collapses to a point (and re-expands after the switch)
           float R = 0.85 * (1.0 - k) + 0.03;
           col *= smoothstep(R, R - 0.05, length(vUv - 0.5) * 2.0);
         }
       }
+
+      // hue rotation
+      if (abs(uHue) > 0.001) col = hueShift(col, uHue * 6.2831853 + uTime * uHue * 0.5);
+      // posterize
+      if (uPosterize > 1.5) col = floor(col * uPosterize) / uPosterize;
+      // invert on beat
+      if (uInvert > 0.001) col = mix(col, 1.0 - col, clamp(uBeat * uInvert, 0.0, 1.0));
 
       // scanlines
       if (uScan > 0.001) col *= 1.0 - uScan * 0.5 * step(0.5, fract(gl_FragCoord.y * 0.5));
@@ -161,7 +193,7 @@ function rebuildScene() { current?.rebuild?.(params); }
 
 // on param changes that require geometry rebuild
 function onParamChange(key) {
-  if (['barCount', 'mirror', 'particleCount', 'gridRows', 'flowLines', 'ringCount', 'matrixSize', 'quality'].includes(key)) rebuildScene();
+  if (['barCount', 'mirror', 'particleCount', 'gridRows', 'flowLines', 'ringCount', 'matrixSize', 'ribbonCount', 'petals', 'quality'].includes(key)) rebuildScene();
   if (key === 'fftSize') audioEngine.setFftSize(params.fftSize);
   if (key === 'smoothing') audioEngine.setSmoothing(params.smoothing);
   if (key === 'fov') { camera.fov = params.fov; camera.updateProjectionMatrix(); }
@@ -210,9 +242,9 @@ function renderPanel() {
     panelBody.appendChild(controlsForGroup('auto', ['autoVJ', 'autoInterval', 'transitionTime', 'transitionStyle', 'syncBeats', 'autoChangePalette', 'autoChangeCamera', 'autoChangeFx'], onParamChange));
     panelBody.appendChild(controlsForGroup('perf', ['quality'], onParamChange));
   } else if (activeTab === 'camera') {
-    panelBody.appendChild(controlsForGroup('camera', ['camMode', 'camDistance', 'camHeight', 'orbitSpeed', 'fov', 'beatShake'], onParamChange));
+    panelBody.appendChild(controlsForGroup('camera', ['camMode', 'camDistance', 'camHeight', 'orbitSpeed', 'fov', 'beatShake', 'camRoll', 'sway', 'fovPulse'], onParamChange));
     panelBody.appendChild(controlsForGroup('atmos', ['brightness', 'background', 'trails', 'fogDensity', 'bloom', 'vignette', 'chromatic', 'strobe'], onParamChange));
-    panelBody.appendChild(controlsForGroup('atmos2', ['pixelate', 'scanline', 'grain', 'mirrorX', 'beatZoom'], onParamChange));
+    panelBody.appendChild(controlsForGroup('atmos2', ['pixelate', 'scanline', 'grain', 'mirrorX', 'beatZoom', 'postKaleido', 'kaleidoSpin', 'radialBlur', 'hueShift', 'posterize', 'invertBeat'], onParamChange));
   } else if (activeTab === 'presets') {
     renderPresetsTab();
   }
@@ -555,6 +587,24 @@ function animate() {
     camera.position.set(0, dist + (Math.random() - 0.5) * shake * 2, 0.01);
     camera.lookAt(0, 0, 0);
   }
+  // gentle sway: slow breathing offset in any view
+  if (params.sway > 0.001) {
+    const s = params.sway;
+    camera.position.x += Math.sin(analyzer.time * 0.31) * 4 * s;
+    camera.position.y += Math.sin(analyzer.time * 0.23 + 1.7) * 3 * s;
+    camera.lookAt(0, 0, 0);
+  }
+  // camera roll: dutch-angle oscillation + beat kick
+  const roll = Math.sin(analyzer.time * 0.17) * 0.5 * params.camRoll + analyzer.beatIntensity * 0.06 * params.camRoll;
+  if (roll !== 0) camera.rotateZ(roll);
+  // bass FOV pulse
+  if (params.fovPulse > 0.001) {
+    camera.fov = params.fov * (1 - params.fovPulse * analyzer.bass * 0.25);
+    camera.updateProjectionMatrix();
+  } else if (camera.fov !== params.fov) {
+    camera.fov = params.fov;
+    camera.updateProjectionMatrix();
+  }
 
   current?.update(dt, analyzer, params);
 
@@ -581,6 +631,13 @@ function animate() {
   u.uMirror.value = params.mirrorX ? 1 : 0;
   u.uZoom.value = 1 + params.beatZoom * analyzer.beatIntensity * 0.18;
   u.uTime.value = analyzer.time;
+  u.uKaleido.value = params.postKaleido;
+  u.uKaleidoSpin.value = params.kaleidoSpin;
+  u.uRadial.value = params.radialBlur;
+  u.uBeat.value = analyzer.beatIntensity;
+  u.uHue.value = params.hueShift;
+  u.uPosterize.value = params.posterize;
+  u.uInvert.value = params.invertBeat;
 
   composer.render();
   refreshTransport();
