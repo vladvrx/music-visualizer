@@ -39,6 +39,8 @@ const FinalShader = {
     uTransK: { value: 0 }, uTransType: { value: 0 }, uTransSeed: { value: 0 },
     uKaleido: { value: 0 }, uKaleidoSpin: { value: 0 }, uRadial: { value: 0 }, uBeat: { value: 0 },
     uHue: { value: 0 }, uPosterize: { value: 0 }, uInvert: { value: 0 },
+    uMirrorY: { value: 0 }, uHalftone: { value: 0 }, uEdge: { value: 0 }, uDuotone: { value: 0 },
+    uWobble: { value: 0 }, uWobbleSpeed: { value: 1 }, uTexel: { value: new THREE.Vector2() },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
@@ -47,6 +49,8 @@ const FinalShader = {
     uniform float uTransK, uTransSeed;
     uniform int uTransType;
     uniform float uKaleido, uKaleidoSpin, uRadial, uBeat, uHue, uPosterize, uInvert;
+    uniform float uMirrorY, uHalftone, uEdge, uDuotone, uWobble, uWobbleSpeed;
+    uniform vec2 uTexel;
     varying vec2 vUv;
     float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)) + uTime * 13.0) * 43758.5453); }
     vec3 hueShift(vec3 c, float a){
@@ -99,6 +103,14 @@ const FinalShader = {
 
       // mirror: fold right half onto the left (symmetry effect)
       if (uMirror > 0.5) uv.x = min(uv.x, 1.0 - uv.x);
+      if (uMirrorY > 0.5) uv.y = min(uv.y, 1.0 - uv.y);
+      // screen wobble: psychedelic sin distortion, stronger on beats
+      if (uWobble > 0.001) {
+        float wA = uWobble * 0.035 * (1.0 + uBeat);
+        float wt = uTime * uWobbleSpeed;
+        uv.x += sin(uv.y * 18.0 + wt) * wA;
+        uv.y += cos(uv.x * 15.0 - wt * 0.8) * wA;
+      }
       // beat zoom (punch-in)
       uv = (uv - 0.5) / uZoom + 0.5;
       // pixelation
@@ -129,8 +141,34 @@ const FinalShader = {
         }
       }
 
+      // edge sketch: sobel-style luminance gradient
+      if (uEdge > 0.001) {
+        float tl = dot(texture2D(tDiffuse, uv + uTexel * vec2(-1.0, 1.0)).rgb, vec3(0.333));
+        float tr = dot(texture2D(tDiffuse, uv + uTexel * vec2(1.0, 1.0)).rgb, vec3(0.333));
+        float bl = dot(texture2D(tDiffuse, uv + uTexel * vec2(-1.0, -1.0)).rgb, vec3(0.333));
+        float br = dot(texture2D(tDiffuse, uv + uTexel * vec2(1.0, -1.0)).rgb, vec3(0.333));
+        float gx = (tr + 2.0 * dot(texture2D(tDiffuse, uv + uTexel * vec2(1.0, 0.0)).rgb, vec3(0.333))) - (tl + 2.0 * dot(texture2D(tDiffuse, uv + uTexel * vec2(-1.0, 0.0)).rgb, vec3(0.333)));
+        float gy = (tl + 2.0 * dot(texture2D(tDiffuse, uv + uTexel * vec2(0.0, 1.0)).rgb, vec3(0.333))) - (bl + 2.0 * dot(texture2D(tDiffuse, uv + uTexel * vec2(0.0, -1.0)).rgb, vec3(0.333)));
+        float mag = clamp(length(vec2(gx, gy)) * 1.6, 0.0, 1.0);
+        vec3 edgeCol = col * 0.5 + 0.5;
+        col = mix(col, edgeCol * mag, uEdge);
+      }
+      // duotone: luminance mapped onto two flat tones
+      if (uDuotone > 0.001) {
+        float l = dot(col, vec3(0.299, 0.587, 0.114));
+        vec3 duo = mix(vec3(0.02, 0.02, 0.05), hueShift(vec3(0.95, 0.9, 0.85), uHue * 6.2831853), smoothstep(0.05, 0.9, l));
+        col = mix(col, duo, uDuotone);
+      }
+      // halftone dots
+      if (uHalftone > 0.001) {
+        vec2 cell = gl_FragCoord.xy / 7.0;
+        vec2 f = fract(cell) - 0.5;
+        float l = dot(col, vec3(0.299, 0.587, 0.114));
+        float d = length(f) / 0.5;
+        col = mix(col, col * step(d, l * 1.15), uHalftone);
+      }
       // hue rotation
-      if (abs(uHue) > 0.001) col = hueShift(col, uHue * 6.2831853 + uTime * uHue * 0.5);
+      if (abs(uHue) > 0.0005) col = hueShift(col, uHue * 6.2831853);
       // posterize
       if (uPosterize > 1.5) col = floor(col * uPosterize) / uPosterize;
       // invert on beat
@@ -233,7 +271,7 @@ function renderPanel() {
     panelBody.appendChild(grid);
     panelBody.appendChild(controlsForGroup('scene', sceneParamsList()[currentKey] || [], onParamChange));
   } else if (activeTab === 'audio') {
-    panelBody.appendChild(controlsForGroup('audio', ['sensitivity', 'barCount', 'freqMapping', 'fftSize', 'smoothing', 'beatSensitivity', 'beatDecay'], onParamChange));
+    panelBody.appendChild(controlsForGroup('audio', ['sensitivity', 'autoGain', 'barCount', 'freqMapping', 'fftSize', 'smoothing', 'beatSensitivity', 'beatDecay'], onParamChange));
   } else if (activeTab === 'colors') {
     panelBody.appendChild(buildPalettePicker(() => renderPanel()));
     panelBody.appendChild(buildGradientEditor(() => { invalidatePaletteCache(); renderPanel(); }));
@@ -244,7 +282,7 @@ function renderPanel() {
   } else if (activeTab === 'camera') {
     panelBody.appendChild(controlsForGroup('camera', ['camMode', 'camDistance', 'camHeight', 'orbitSpeed', 'fov', 'beatShake', 'camRoll', 'sway', 'fovPulse'], onParamChange));
     panelBody.appendChild(controlsForGroup('atmos', ['brightness', 'background', 'trails', 'fogDensity', 'bloom', 'vignette', 'chromatic', 'strobe'], onParamChange));
-    panelBody.appendChild(controlsForGroup('atmos2', ['pixelate', 'scanline', 'grain', 'mirrorX', 'beatZoom', 'postKaleido', 'kaleidoSpin', 'radialBlur', 'hueShift', 'posterize', 'invertBeat'], onParamChange));
+    panelBody.appendChild(controlsForGroup('atmos2', ['pixelate', 'scanline', 'grain', 'mirrorX', 'mirrorY', 'beatZoom', 'postKaleido', 'kaleidoSpin', 'radialBlur', 'hueShift', 'hueAuto', 'posterize', 'invertBeat', 'halftone', 'edge', 'duotone', 'wobble', 'wobbleSpeed'], onParamChange));
   } else if (activeTab === 'presets') {
     renderPresetsTab();
   }
@@ -547,6 +585,11 @@ addEventListener('keydown', (e) => {
     case 'r': $('btn-record').click(); break;
     case 'x': randomize(); break;
     case 'a': setAutoVJ(!params.autoVJ); break;
+    case 'n': {
+      const keys = Object.keys(SCENES);
+      setScene(keys[(keys.indexOf(currentKey) + 1) % keys.length]);
+      break;
+    }
     case 'arrowright': audioEngine.next(); break;
     case 'arrowleft': audioEngine.prev(); break;
   }
@@ -635,9 +678,16 @@ function animate() {
   u.uKaleidoSpin.value = params.kaleidoSpin;
   u.uRadial.value = params.radialBlur;
   u.uBeat.value = analyzer.beatIntensity;
-  u.uHue.value = params.hueShift;
+  u.uHue.value = params.hueShift + params.hueAuto * Math.sin(analyzer.time * 0.21) * 0.8;
   u.uPosterize.value = params.posterize;
   u.uInvert.value = params.invertBeat;
+  u.uMirrorY.value = params.mirrorY ? 1 : 0;
+  u.uHalftone.value = params.halftone;
+  u.uEdge.value = params.edge;
+  u.uDuotone.value = params.duotone;
+  u.uWobble.value = params.wobble;
+  u.uWobbleSpeed.value = params.wobbleSpeed;
+  u.uTexel.value.set(1 / renderer.domElement.width, 1 / renderer.domElement.height);
 
   composer.render();
   refreshTransport();

@@ -20,6 +20,9 @@ export class Analyzer {
     this.bpm = 0;
     this.time = 0;
     this.onBeat = null;
+    // auto-gain: decaying peak tracker so quiet songs visualize as strongly as loud ones
+    this.peak = 0.15;
+    this.agcGain = 1;
   }
 
   update(dt, params) {
@@ -31,6 +34,14 @@ export class Analyzer {
     if (this.freq.length !== n) { this.freq = new Uint8Array(n); this.wave = new Uint8Array(n * 2); }
     analyser.getByteFrequencyData(this.freq);
     analyser.getByteTimeDomainData(this.wave);
+
+    // adaptive gain: normalize against a slowly decaying peak of overall loudness
+    this.peak = Math.max(this.peak * Math.exp(-dt * 0.05), 0.02);
+    let inst = 0;
+    for (let b = 0; b < n / 8; b++) if (this.freq[b] > inst) inst = this.freq[b];
+    inst /= 255;
+    if (inst > this.peak) this.peak += (inst - this.peak) * 0.3;
+    this.agcGain = params.autoGain ? Math.min(3.5, Math.max(1, 0.35 / this.peak)) : 1;
 
     // Map FFT bins to display bands with log or linear scaling
     const count = params.barCount;
@@ -50,6 +61,13 @@ export class Analyzer {
         const idx = Math.floor(i / count * n * 0.8); // linear over 80% of spectrum (usable range)
         v = this.freq[idx] / 255;
       }
+      // adaptive gain: normalize against a slowly decaying peak of overall loudness
+      this.peak = Math.max(this.peak * Math.exp(-dt * 0.05), 0.02);
+      const inst = this.freq.reduce((a, b, idx2) => (idx2 < n / 8 ? Math.max(a, b) : a), 0) / 255;
+      if (inst > this.peak) this.peak += (inst - this.peak) * 0.3;
+      this.agcGain = params.autoGain ? Math.min(3.5, Math.max(1, 0.35 / this.peak)) : 1;
+      v = Math.min(1.2, v * this.agcGain);
+      v = Math.min(1.2, v * this.agcGain);
       v = Math.pow(v, params.sensitivity);
       this.spectrum[i] = v;
     }
