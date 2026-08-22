@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Music Visualizer</title>
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div id="drop-overlay"><div>Drop audio files to play</div></div>
+
+  <!-- Top bar -->
+  <header id="topbar" class="ui">
+    <div class="brand">♪ Visualizer</div>
+    <div id="now-playing"></div>
+    <div class="topbar-actions">
+      <button id="btn-hide-ui" title="Hide UI (H)">👁</button>
+      <button id="btn-fullscreen" title="Fullscreen (F)">⛶</button>
+      <button id="btn-screenshot" title="Save PNG (S)">📷</button>
+      <button id="btn-record" title="Record WebM (R)">⏺</button>
+      <button id="btn-randomize" title="Randomize visuals (X)">🎲</button>
+      <button id="btn-autovj" title="Auto VJ — automatic scenes & transitions (A)">🎬</button>
+    </div>
+  </header>
+
+  <!-- Transport -->
+  <footer id="transport" class="ui">
+    <div class="transport-row">
+      <button id="btn-prev">⏮</button>
+      <button id="btn-play">▶</button>
+      <button id="btn-next">⏭</button>
+      <span id="time-current">0:00</span>
+      <input type="range" id="seek" min="0" max="1000" value="0" />
+      <span id="time-total">0:00</span>
+      <span id="bpm-display" title="Estimated BPM">-- BPM</span>
+      <span id="beat-light" title="Beat indicator"></span>
+      <span id="volume-icon" title="Volume">🔊</span>
+      <input type="range" id="volume" min="0" max="100" value="80" style="width:110px" title="Volume" />
+    </div>
+    <div class="transport-row sources">
+      <button id="btn-file">📂 Open files</button>
+      <input type="file" id="file-input" accept="audio/*" multiple hidden />
+      <input type="text" id="url-input" placeholder="Paste audio URL (direct file/stream)…" />
+      <button id="btn-url">Load URL</button>
+      <button id="btn-mic">🎙 Mic</button>
+      <select id="playlist" title="Playlist"></select>
+    </div>
+  </footer>
+
+  <!-- Control panel -->
+  <aside id="panel" class="ui">
+    <div class="panel-tabs">
+      <button data-tab="scenes" class="active">Scenes</button>
+      <button data-tab="audio">Audio</button>
+      <button data-tab="colors">Colors</button>
+      <button data-tab="camera">Camera/FX</button>
+      <button data-tab="auto">Auto</button>
+      <button data-tab="presets">Presets</button>
+    </div>
+    <div id="panel-body"></div>
+  </aside>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
