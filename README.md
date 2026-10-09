@@ -1,5 +1,7 @@
 # Music Visualizer
 
+[Open the live visualizer](https://vladvrx.github.io/music-visualizer/)
+
 The ultimate browser music visualizer — 31 GPU scenes, an Auto VJ director, and a deep FX rack, all in plain Three.js. Load any song and watch it come alive.
 
 ## Run
